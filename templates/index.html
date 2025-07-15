@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indian Weather Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 800px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .control-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        
+        .control-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            background: white;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            animation: fadeIn 0.3s;
+        }
+        
+        .message.user {
+            background: #e3f2fd;
+            margin-left: 20%;
+        }
+        
+        .message.bot {
+            background: #f5f5f5;
+            margin-right: 20%;
+        }
+        
+        .message-header {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .message-content {
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        
+        .chat-input-container {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .chat-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .message.user {
+                margin-left: 10%;
+            }
+            
+            .message.bot {
+                margin-right: 10%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌤️ Indian Weather Chatbot</h1>
+            <p>Get weather updates and forecasts for any Indian city</p>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="language">Language</label>
+                <select id="language">
+                    {% for code, name in languages.items() %}
+                    <option value="{{ code }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="state">State / Union Territory</label>
+                <input type="text" id="stateSearch" placeholder="Search states..." style="width: 100%; padding: 8px; margin-bottom: 8px; border: 2px solid #dee2e6; border-radius: 8px;">
+                <select id="state" size="6" style="height: 150px;">
+                    <option value="">Select a state or union territory</option>
+                    {% for state in states|sort %}
+                    <option value="{{ state }}">{{ state }}</option>
+                    {% endfor %}
+                </select>
+                <small style="color: #666; display: block; margin-top: 5px;">{{ states|length }} states and union territories available</small>
+            </div>
+            
+            <div class="control-group">
+                <label for="district">District/City</label>
+                <input type="text" id="districtSearch" placeholder="Search districts..." style="width: 100%; padding: 8px; margin-bottom: 8px; border: 2px solid #dee2e6; border-radius: 8px;" disabled>
+                <select id="district" size="5" style="height: 120px;" disabled>
+                    <option value="">Select a district</option>
+                </select>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="getWeather()">Get Weather</button>
+            </div>
+        </div>
+        
+        <div class="chat-container" id="chatContainer">
+            <div class="message bot">
+                <div class="message-header">Weather Assistant</div>
+                <div class="message-content">Hello! I can help you with weather information for any Indian city. Select your state and district above, or ask me any weather-related questions!</div>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #666;">Getting weather information...</p>
+        </div>
+        
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Ask me about weather, climate, or get tips..." onkeypress="handleKeyPress(event)">
+                <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Search functionality for states
+        document.getElementById('stateSearch').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const stateSelect = document.getElementById('state');
+            const options = stateSelect.getElementsByTagName('option');
+            
+            for (let i = 1; i < options.length; i++) { // Skip first "Select a state" option
+                const optionText = options[i].text.toLowerCase();
+                if (optionText.includes(searchTerm)) {
+                    options[i].style.display = '';
+                } else {
+                    options[i].style.display = 'none';
+                }
+            }
+        });
+        
+        // Search functionality for districts
+        document.getElementById('districtSearch').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const districtSelect = document.getElementById('district');
+            const options = districtSelect.getElementsByTagName('option');
+            
+            for (let i = 1; i < options.length; i++) { // Skip first "Select a district" option
+                const optionText = options[i].text.toLowerCase();
+                if (optionText.includes(searchTerm)) {
+                    options[i].style.display = '';
+                } else {
+                    options[i].style.display = 'none';
+                }
+            }
+        });
+        
+        // Update districts when state is selected
+        document.getElementById('state').addEventListener('change', async function() {
+            const state = this.value;
+            const districtSelect = document.getElementById('district');
+            const districtSearch = document.getElementById('districtSearch');
+            
+            if (!state) {
+                districtSelect.disabled = true;
+                districtSearch.disabled = true;
+                districtSelect.innerHTML = '<option value="">Select a district</option>';
+                districtSearch.value = '';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/get_districts/${state}`);
+                const districts = await response.json();
+                
+                districtSelect.disabled = false;
+                districtSearch.disabled = false;
+                districtSelect.innerHTML = '<option value="">Select a district</option>';
+                
+                districts.forEach(district => {
+                    const option = document.createElement('option');
+                    option.value = district;
+                    option.textContent = district;
+                    districtSelect.appendChild(option);
+                });
+                
+                // Update district count display
+                const districtLabel = document.querySelector('label[for="district"]');
+                districtLabel.textContent = `District/City (${districts.length} available)`;
+            } catch (error) {
+                console.error('Error fetching districts:', error);
+            }
+        });
+        
+        async function getWeather() {
+            const state = document.getElementById('state').value;
+            const district = document.getElementById('district').value;
+            const language = document.getElementById('language').value;
+            
+            if (!state || !district) {
+                alert('Please select both state and district');
+                return;
+            }
+            
+            showLoading(true);
+            addMessage('user', `Get weather for ${district}, ${state}`);
+            
+            try {
+                const response = await fetch('/get_weather', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ state, district, language })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addMessage('bot', data.response);
+                } else {
+                    addMessage('bot', data.error || 'Error fetching weather data');
+                }
+            } catch (error) {
+                addMessage('bot', 'Error connecting to weather service');
+                console.error('Error:', error);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            const language = document.getElementById('language').value;
+            
+            if (!message) return;
+            
+            input.value = '';
+            addMessage('user', message);
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message, language })
+                });
+                
+                const data = await response.json();
+                addMessage('bot', data.response);
+            } catch (error) {
+                addMessage('bot', 'Error connecting to chat service');
+                console.error('Error:', error);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        function addMessage(sender, content) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'message-header';
+            headerDiv.textContent = sender === 'user' ? 'You' : 'Weather Assistant';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+            
+            messageDiv.appendChild(headerDiv);
+            messageDiv.appendChild(contentDiv);
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            if (show) {
+                loading.classList.add('active');
+            } else {
+                loading.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>
