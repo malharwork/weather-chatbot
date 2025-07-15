@@ -6,24 +6,19 @@ import anthropic
 from deep_translator import GoogleTranslator
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 
-# Configuration - Open-Meteo doesn't need API key!
 CLAUDE_API_KEY = os.environ.get('CLAUDE_API_KEY')
 
-# Initialize services
 if CLAUDE_API_KEY:
     claude_client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
 else:
     claude_client = None
     print("Warning: CLAUDE_API_KEY not set. Chat functionality will be limited.")
 
-# Indian states and union territories with their districts and coordinates
 INDIAN_LOCATIONS = {
-    # 28 States
     "Andhra Pradesh": {
         "Visakhapatnam": {"lat": 17.6868, "lon": 83.2185},
         "Vijayawada": {"lat": 16.5062, "lon": 80.6480},
@@ -344,9 +339,6 @@ INDIAN_LOCATIONS = {
         "Haldia": {"lat": 22.0667, "lon": 88.0698}
     },
 }
-    # 
-
-# Supported languages
 SUPPORTED_LANGUAGES = {
     'en': 'English',
     'hi': 'Hindi',
@@ -380,27 +372,22 @@ def get_weather():
     if not state or not district:
         return jsonify({'error': 'Please select both state and district'}), 400
     
-    # Get coordinates
     location = INDIAN_LOCATIONS.get(state, {}).get(district)
     if not location:
         return jsonify({'error': 'Location not found'}), 404
     
-    # Get comprehensive weather data from Open-Meteo
     weather_data = get_weather_data(location['lat'], location['lon'])
     
     if not weather_data:
         return jsonify({'error': 'Failed to fetch weather data'}), 500
     
-    # Format response
     response = format_weather_response(weather_data, district, state)
     
-    # Translate if needed
     if language != 'en':
         try:
             response = translate_text(response, language)
         except Exception as e:
             print(f"Translation failed: {e}")
-            # Return English response if translation fails
     
     return jsonify({'response': response})
 
@@ -411,14 +398,11 @@ def chat():
     language = data.get('language', 'en')
     context = data.get('context', '')
     
-    # Translate to English if needed
     if language != 'en':
         message = translate_text(message, 'en')
     
-    # Get Claude response
     response = get_claude_response(message, context)
     
-    # Translate back if needed
     if language != 'en':
         response = translate_text(response, language)
     
@@ -435,7 +419,7 @@ def get_weather_data(lat, lon):
         'hourly': 'temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m',
         'daily': 'weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max',
         'timezone': 'Asia/Kolkata',
-        'forecast_days': 16  # Get 16-day forecast
+        'forecast_days': 16  
     }
     
     try:
@@ -497,7 +481,6 @@ def format_weather_response(data, district, state):
     response += f"🌧️ Precipitation: {current.get('precipitation', 0)} mm\n"
     response += f"💨 Wind Speed: {current.get('wind_speed_10m', 'N/A')} km/h\n\n"
     
-    # Today's details
     if daily.get('temperature_2m_max') and daily.get('temperature_2m_min'):
         response += f"**Today's Range:** {daily['temperature_2m_min'][0]}°C - {daily['temperature_2m_max'][0]}°C\n"
         if daily.get('sunrise') and daily.get('sunset'):
@@ -505,7 +488,6 @@ def format_weather_response(data, district, state):
             sunset = datetime.fromisoformat(daily['sunset'][0]).strftime('%I:%M %p')
             response += f"🌅 Sunrise: {sunrise} | 🌇 Sunset: {sunset}\n\n"
     
-    # Next 24 hours summary
     response += "**Next 24 Hours:**\n"
     for i in range(0, min(24, len(hourly['time'])), 6):  # Every 6 hours
         time = datetime.fromisoformat(hourly['time'][i]).strftime('%I %p')
@@ -579,7 +561,6 @@ def translate_text(text, target_language):
         if target_language == 'en':
             return text
         
-        # Map language codes to full names for deep-translator
         language_map = {
             'hi': 'hindi',
             'ta': 'tamil',
@@ -594,7 +575,6 @@ def translate_text(text, target_language):
         target_lang = language_map.get(target_language, target_language)
         translator = GoogleTranslator(source='english', target=target_lang)
         
-        # Split text into smaller chunks if needed (5000 char limit)
         if len(text) > 4500:
             chunks = [text[i:i+4500] for i in range(0, len(text), 4500)]
             translated_chunks = []
@@ -605,7 +585,7 @@ def translate_text(text, target_language):
             return translator.translate(text)
     except Exception as e:
         print(f"Translation error: {e}")
-        return text  # Return original text if translation fails
+        return text  
 
 if __name__ == '__main__':
     # Check if Claude API key is set (optional for chat features)
